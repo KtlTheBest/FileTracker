@@ -1,9 +1,12 @@
+import argparse
 import socket
 import threading
 import re
 
 PORT = 1234
 available_files = {}
+
+connected_users = set()
 
 ###### EXCEPTIONS: BEGIN ######
 
@@ -54,7 +57,14 @@ class WrongItemNumberError(Exception):
 ###### EXCEPTIONS: END ######
 
 def parseArgs():
-    pass
+    global PORT
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--port', type=int, default = 1234)
+
+    args = parser.parse_args()
+
+    PORT = args.port
 
 def getData(s):
     result = ""
@@ -67,7 +77,18 @@ def getData(s):
 
         result += data
 
-    return result
+    return result.decode('utf-8')
+
+def prepareResponse(fname):
+    fname = fname.rstrip()
+
+    r = ""
+
+    if fname in available_files:
+        for f in available[fname]:
+            r += "<{},{},{},{},{}>\n".format(f)
+
+    return r.encode('utf-8')
 
 def sendError(s, message):
     if message == "":
@@ -82,7 +103,7 @@ def checkFileName(filename):
         raise WrongFileNameError
 
 def checkFileType(Type):
-    typePat = re.compile(r'^[a-z]{3,20}$')
+    typePat = re.compile(r'^[a-z/]{3,70}$')
     res = typePat.search(Type)
 
     if res == None:
@@ -147,6 +168,8 @@ def checkItems(items):
     return items
 
 def parseFileListData(s, data, addr):
+    global available_files
+
     countPat = re.compile(r'<(.+?)>')
     matches = countPat.finditer(data)
 
@@ -158,12 +181,18 @@ def parseFileListData(s, data, addr):
     if not (count > 0 and count < 6):
         raise ParseError
 
+    connect_user = False
+
     for match in matches:
         items = match.group(1).split(',')
 
         try:
             items = checkItems(items)
-
+            connect_user = True
+            if items[0] in available_files:
+                available_files[items[0]].append(items[1:])
+            else:
+                available_files[items[0]] = [items[1:]]
         except WrongFileNameError as e:
             message = e
         except WrongFileTypeError as e:
@@ -187,7 +216,14 @@ def parseFileListData(s, data, addr):
         finally:
             sendError(s, message)
 
+    if connect_user == True:
+        connected_users.add(items[4])
+
 def acceptClient(s, addr):
+    global connected_users
+
+    s.send(b'HI')
+
     data = getData(s)
 
     try:
@@ -195,16 +231,45 @@ def acceptClient(s, addr):
     except ParseError:
         pass
 
+def removeClient(addr):
+    global connected_users
+    global available_files
+
+    for fname, v in available_files.items():
+        if v is None:
+            continue
+
+        to_remove = []
+
+        for user in available_files[fname]:
+            if (user[4], user[5]) == addr:
+                to_remove.append(user)
+
+        for r in to_remove:
+            available_files[fname].remove(r)
+
+    connected_users.discard(addr[0])
+
+def searchFiles(s, fname):
+    r = prepareResponse(fname)
+    s.send(r)
+    pass
+
 def parseRequest(s, addr):
     data = getData(s)
 
     if data == "HELLO":
         acceptClient(s, addr)
+    elif data == "BYE":
+        removeClient(addr)
+    elif data[:8] == "SEARCH: ":
+        searchFiles(s, data[8:])
     else:
         pass
 
 def listenForClients(s):
     while True:
+        print("Listening for connections")
         sock, addr = s.accept()
         parseRequest(sock)
 
@@ -212,9 +277,10 @@ def main():
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     addr = ("", PORT)
 
-    s = socket.create_server(addr)
+    serverSocket.bind(addr)
+    serverSocket.listen()
 
-    listen_thread = threading.Thread(target=listenForClients, args=(s,))
+    listen_thread = threading.Thread(target=listenForClients, args=(serverSocket,))
     listen_thread.start()
 
 if __name__ == "__main__":
