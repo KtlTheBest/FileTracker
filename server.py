@@ -271,7 +271,7 @@ def listenForClients(s):
     while True:
         print("Listening for connections")
         sock, addr = s.accept()
-        parseRequest(sock)
+        parseRequest(sock, addr)
 
 def main():
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
