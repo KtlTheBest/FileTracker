@@ -66,17 +66,21 @@ def parseArgs():
 
     PORT = args.port
 
-def getData(s):
-    result = ""
+def getData(s, addr):
+    result = bytes()
+    #result = s.recv(1024)
+    #print("ACCEPT: {}, LEN: {}".format(result.decode('utf-8'), len(result)))
+    #return result.decode('utf-8')
 
     while True:
         data = s.recv(1024)
-
-        if not data:
-            break
-
         result += data
 
+        if len(data):
+            break
+
+
+    print("{} - ACCEPT: {}, LEN: {}".format(addr, result.decode('utf-8'), len(result)))
     return result.decode('utf-8')
 
 def prepareResponse(fname):
@@ -222,9 +226,9 @@ def parseFileListData(s, data, addr):
 def acceptClient(s, addr):
     global connected_users
 
-    s.send(b'HI')
+    s.sendall(bytearray('HI', 'utf-8'))
 
-    data = getData(s)
+    data = getData(s, addr)
 
     try:
         parseFileListData(s, data, addr)
@@ -256,7 +260,8 @@ def searchFiles(s, fname):
     pass
 
 def parseRequest(s, addr):
-    data = getData(s)
+    print("Trying to read his data")
+    data = getData(s, addr)
 
     if data == "HELLO":
         acceptClient(s, addr)
@@ -271,14 +276,16 @@ def listenForClients(s):
     while True:
         print("Listening for connections")
         sock, addr = s.accept()
-        parseRequest(sock, addr)
+        print("Accepted connection from {}".format(addr))
+        parseThread = threading.Thread(target=parseRequest, args=(sock, addr))
+        parseThread.start()
 
 def main():
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     addr = ("", PORT)
 
     serverSocket.bind(addr)
-    serverSocket.listen()
+    serverSocket.listen(100)
 
     listen_thread = threading.Thread(target=listenForClients, args=(serverSocket,))
     listen_thread.start()

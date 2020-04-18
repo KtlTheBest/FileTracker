@@ -29,16 +29,16 @@ class Main():
         self.port_client = int(port)
         self.socket_client = socket.create_connection(
             (self.ip_server, self.port_server), timeout=10)
-        self.socket_client.sendall(bytearray("HELLO", "utf-8"))
+        self.socket_client.sendall(b"HELLO")
         data = self.socket_client.recv(1024)
         print(data)
         if(data != b'HI'):
-            raise Exception("Invalid responce")
+            raise Exception("Invalid response")
         self.socket_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket_server.bind(("0.0.0.0", self.port_client))
 
     def search(self, keyword):
-        self.socket_client.sendall(bytearray("SEARCH"+keyword, "utf-8"))
+        self.socket_client.sendall(bytearray("SEARCH: "+keyword, "utf-8"))
         data = self.socket_client.recv(4048)
         data_str = data.decode("utf-8")
         if data_str == "NOT FOUND":
