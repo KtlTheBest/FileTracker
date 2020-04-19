@@ -37,6 +37,14 @@ class Main():
         self.socket_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket_server.bind(("0.0.0.0", self.port_client))
 
+        self.get_files()
+
+        fileList = ""
+        for f in self.files:
+            fileList += f.form_str(self.ip_client, self.port_client)
+
+        self.socket_client.sendall(bytes(fileList, 'utf-8'))
+
     def search(self, keyword):
         self.socket_client.sendall(bytearray("SEARCH: "+keyword, "utf-8"))
         data = self.socket_client.recv(4048)

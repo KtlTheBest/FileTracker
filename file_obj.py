@@ -9,7 +9,7 @@ class File():
         self.fname = name
         stat = os.stat(name)
         self.last_mod = datetime.datetime.fromtimestamp(
-            stat.st_mtime).strftime("%d/%m/%Y")
+            stat.st_mtime).strftime("%d/%m/%y")
         self.size = stat.st_size
         self.MIMEtype = guess_type(self.fname)[0]
 

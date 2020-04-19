@@ -90,41 +90,46 @@ def prepareResponse(fname):
 
     if fname in available_files:
         for f in available[fname]:
-            r += "<{},{},{},{},{}>\n".format(f)
+            print("f: {}".format(f))
+            r += "<{},{},{},{},{}>\n".format(f[0],f[1],f[2],f[3],f[4])
 
     return r.encode('utf-8')
 
 def sendError(s, message):
+    print("Message: {}".format(message))
     if message == "":
         return
 
+    print("ERROR: {}".format(message))
     s.sendall(bytes("ERROR: ") + bytes(message))
 
 def checkFileName(filename):
-    valid_filename_pat = re.compile(r'^[\w,\s-_]+(\.([A-Za-z]{1, 6})?)?$')
+    print("Checking filename")
+    valid_filename_pat = re.compile(r'^[_A-Za-z -]+(\.([A-Za-z]{1,6})?)?$')
+    print("Constructed pattern")
     res = valid_filename_pat.search(filename)
     if not res:
         raise WrongFileNameError
 
 def checkFileType(Type):
-    typePat = re.compile(r'^[a-z/]{3,70}$')
+    typePat = re.compile(r'^[a-z/-]{3,70}$')
     res = typePat.search(Type)
 
-    if res == None:
+    if res is None:
         raise WrongFileTypeError
 
 def checkFileSize(size):
     sizePat = re.compile(r'^([1-9][0-9]*|0)$')
     res = sizePat.search(size)
 
-    if res == None:
+    if res is None:
         raise WrongFileSizeError
 
 def checkModDate(date):
     datePat = re.compile(r'^[0-9]{2}/[0-9]{2}/[0-9]{2}$')
     res = datePat.search(date)
 
-    if res == None:
+    if res is None:
         raise WrongDateFormatError
 
     vals = date.split('/')
@@ -136,10 +141,11 @@ def checkModDate(date):
 def checkIPAddr(ip):
     orig = ip
     ip += '.'
+    print(ip)
     ipPat = re.compile(r'^((0|[1-9][0-9]{0,2})\.){4}$')
-    match = ipPat.serach(ip)
+    match = ipPat.search(ip)
 
-    if match == None:
+    if match is None:
         raise WrongIPFormatError
 
     ip = orig.split('.')
@@ -162,14 +168,20 @@ def checkItems(items):
     if len(items) != 6:
         raise WrongItemNumberError
 
-    checkFileName(item[0])
-    checkFileType(item[1])
-    checkFileSize(item[2])
-    checkModDate(item[3])
-    checkIPAddr(item[4])
-    checkPort(item[5])
-
-    return items
+    print("len is 6")
+    print(items[0])
+    checkFileName(items[0])
+    print("first check done")
+    checkFileType(items[1])
+    print("second check done")
+    checkFileSize(items[2])
+    print("third check done")
+    checkModDate(items[3])
+    print("fourth check done")
+    checkIPAddr(items[4])
+    print("fifth check done")
+    checkPort(items[5])
+    print("last check done")
 
 def parseFileListData(s, data, addr):
     global available_files
@@ -182,46 +194,63 @@ def parseFileListData(s, data, addr):
     for match in matches:
         count += 1
 
-    if not (count > 0 and count < 6):
+    print("File count: {}".format(count))
+
+    if count == 0 or count > 5:
         raise ParseError
 
     connect_user = False
 
+    matches = countPat.finditer(data)
+
     for match in matches:
         items = match.group(1).split(',')
 
-        try:
-            items = checkItems(items)
-            connect_user = True
-            if items[0] in available_files:
-                available_files[items[0]].append(items[1:])
-            else:
-                available_files[items[0]] = [items[1:]]
-        except WrongFileNameError as e:
-            message = e
-        except WrongFileTypeError as e:
-            message = e
-        except WrongFileSizeError as e:
-            message = e
-        except WrongDateFormatError as e:
-            message = e
-        except WrongDateValueError as e:
-            message = e
-        except WrongIPFormatError as e:
-            message = e
-        except WrongIPValueError as e:
-            message = e
-        except WrongPortNumberError as e:
-            message = e
-        except WrongPortFormatError as e:
-            message = e
-        except WrongItemNumberError as e:
-            message = e
-        finally:
-            sendError(s, message)
+        #try:
+        print("Got here")
+        print("{}".format(items))
+        checkItems(items)
+        connect_user = True
+        print("connected_user now true")
+        print(items)
+
+        if items[0] in available_files:
+            available_files[items[0]].append(items[1:])
+            print("Appended file")
+        else:
+            available_files[items[0]] = [items[1:]]
+            print("Added a new file")
+        #except WrongFileNameError as e:
+            #message = e
+        #except WrongFileTypeError as e:
+            #message = e
+        #except WrongFileSizeError as e:
+            #message = e
+        #except WrongDateFormatError as e:
+            #message = e
+        #except WrongDateValueError as e:
+            #message = e
+        #except WrongIPFormatError as e:
+            #message = e
+        #except WrongIPValueError as e:
+            #message = e
+        #except WrongPortNumberError as e:
+            #message = e
+        #except WrongPortFormatError as e:
+            #message = e
+        #except WrongItemNumberError as e:
+            #message = e
+        #except Exception as e:
+            #message = e
+        #finally:
+            #print("Message: " + message)
+            #sendError(s, message)
+
+    print("Connect user: {}".format(connect_user))
 
     if connect_user == True:
         connected_users.add(items[4])
+        print("Added {} to connected users".format(addr))
 
 def acceptClient(s, addr):
     global connected_users
@@ -229,6 +258,7 @@ def acceptClient(s, addr):
     s.sendall(bytearray('HI', 'utf-8'))
 
     data = getData(s, addr)
+    print("Filelist from {} accepted".format(addr))
 
     try:
         parseFileListData(s, data, addr)
@@ -259,26 +289,34 @@ def searchFiles(s, fname):
     s.send(r)
     pass
 
-def parseRequest(s, addr):
-    print("Trying to read his data")
-    data = getData(s, addr)
-
+def parseRequest(s, addr, data):
     if data == "HELLO":
+        print("Tryint to parse HELLO request from {}".format(addr))
         acceptClient(s, addr)
     elif data == "BYE":
         removeClient(addr)
     elif data[:8] == "SEARCH: ":
+        print("Trying to parse SEARCH request from {}".format(addr))
         searchFiles(s, data[8:])
     else:
         pass
+
+def handleClient(s, addr):
+    while True:
+        try:
+            data = getData(s, addr)
+            print("CLIENT: {}\nDATA: {}".format(addr, data))
+            parseRequest(s, addr, data)
+        except:
+            return
 
 def listenForClients(s):
     while True:
         print("Listening for connections")
         sock, addr = s.accept()
         print("Accepted connection from {}".format(addr))
-        parseThread = threading.Thread(target=parseRequest, args=(sock, addr))
-        parseThread.start()
+        handleThread = threading.Thread(target=handleClient, args=(sock, addr))
+        handleThread.start()
 
 def main():
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
