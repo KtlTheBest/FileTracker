@@ -85,13 +85,21 @@ def getData(s, addr):
 
 def prepareResponse(fname):
     fname = fname.rstrip()
+    print("Preparing request, filename: {}".format(fname))
 
-    r = ""
+    print(available_files)
 
-    if fname in available_files:
-        for f in available[fname]:
-            print("f: {}".format(f))
-            r += "<{},{},{},{},{}>\n".format(f[0],f[1],f[2],f[3],f[4])
+    if fname not in available_files:
+        r = "NOT FOUND"
+        return r.encode('utf-8')
+
+    r = "FOUND: "
+
+    for f in available_files[fname]:
+        print("f: {}".format(f))
+        r += "<{},{},{},{},{}>\n".format(f[0],f[1],f[2],f[3],f[4])
+
+    print("Response: " + r)
 
     return r.encode('utf-8')
 
@@ -105,14 +113,14 @@ def sendError(s, message):
 
 def checkFileName(filename):
     print("Checking filename")
-    valid_filename_pat = re.compile(r'^[_A-Za-z -]+(\.([A-Za-z]{1,6})?)?$')
+    valid_filename_pat = re.compile(r'^[._A-Za-z -]+(\.([A-Za-z]{1,6})?)?$')
     print("Constructed pattern")
     res = valid_filename_pat.search(filename)
     if not res:
         raise WrongFileNameError
 
 def checkFileType(Type):
-    typePat = re.compile(r'^[a-z/-]{3,70}$')
+    typePat = re.compile(r'^[a-zA-Z/-]{3,70}$')
     res = typePat.search(Type)
 
     if res is None:
