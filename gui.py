@@ -159,7 +159,7 @@ class FileWidget(QWidget):
         widgetLayout.addWidget(self.size_label, 1)
         widgetLayout.addWidget(self.date_label, 1)
         widgetLayout.setAlignment(Qt.AlignCenter)
-        self.setLayout(self.widgetLayout)
+        self.setLayout(widgetLayout)
 
     # converting bytes to human readable format
     def humansize(self, nbytes):

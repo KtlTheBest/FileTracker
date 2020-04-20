@@ -1,5 +1,5 @@
 import os
-from datetime.datetime import fromtimestamp
+import datetime
 from mimetypes import guess_type
 
 
@@ -7,7 +7,7 @@ class File():
     def __init__(self, name):
         self.fname = name
         stat = os.stat(name)
-        self.last_mod = fromtimestamp(
+        self.last_mod = datetime.datetime.fromtimestamp(
             stat.st_mtime).strftime("%d/%m/%y")
         self.size = stat.st_size
         guess = guess_type(self.fname)
