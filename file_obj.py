@@ -1,21 +1,25 @@
 import os
-import datetime
+from datetime.datetime import fromtimestamp
 from mimetypes import guess_type
-# from datetime import fromtimestamp
 
 
 class File():
     def __init__(self, name):
         self.fname = name
         stat = os.stat(name)
-        self.last_mod = datetime.datetime.fromtimestamp(
+        self.last_mod = fromtimestamp(
             stat.st_mtime).strftime("%d/%m/%y")
         self.size = stat.st_size
-        self.MIMEtype = guess_type(self.fname)[0]
+        guess = guess_type(self.fname)
+        self.MIMEtype = guess[0] if guess[0] else 'data'
 
     def form_str(self, ip, port):
-        return "<{},{},{},{},{},{}>".format(
+        return "<{},{},{},{},{},{}>\n".format(
             self.fname, self.MIMEtype, self.size, self.last_mod, ip, port)
+
+    def equals(self, fname, MIMEtype, size):
+        return self.fname == fname and self.size == size\
+            and self.MIMEtype == MIMEtype
 
     def __repr__(self):
         return "<{}, Size:{}, Last modified:{}, Type:{}>".format(
